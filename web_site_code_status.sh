@@ -1,49 +1,47 @@
 #!/bin/bash
-# function:monitor tcp connect status from zabbix
 
+UrlFile="/opt/scripts/WEB.txt"
 IFS=$'\n'
+
 web_site_discovery () {
-#shell array
-WEB_SITE=($(cat  /opt/scripts/WEB.txt|grep -v "^#"))
-        printf '{\n'
-        printf '\t"data":[\n'
-for((i=0;i<${#WEB_SITE[@]};++i))
-{
-num=$(echo $((${#WEB_SITE[@]}-1)))
-        if [ "$i" != ${num} ];
-        then
-        arg1=$(echo ${WEB_SITE[$i]}|awk '{print $1}')
-        arg2=$(echo ${WEB_SITE[$i]}|awk '{print $2}')
-            printf "\t\t{ \n"
-            printf "\t\t\t\"{#SITENAME}\":\"$arg1\",\"{#PROXYIP}\":\"$arg2\"},\n"
+    WEB_SITE=($(cat $UrlFile|grep -v "^#"))
+    printf '{\n'
+    printf '\t"data":[\n'
+    num=${#WEB_SITE[@]}
+    for site in ${WEB_SITE[@]}
+    do
+        num=$(( $num - 1 ))
+    url=$(echo $site|awk '{print $1}')
+    ip=$(echo $site|awk '{print $2}')
+        if [ $num -ne 0 ] ; then
+            printf "\t\t{\"{#SITENAME}\":\""${url}"\",\"{#PROXYIP}\":\""${ip}"\"},\n"
         else
-        arg1=$(echo ${WEB_SITE[$num]}|awk '{print $1}')
-        arg2=$(echo ${WEB_SITE[$num]}|awk '{print $2}')
-            printf  "\t\t{ \n"
-            #printf  "\t\t\t\"{#SITENAME}\":\"${WEB_SITE[$num]}\"}]}\n"
-            printf  "\t\t\t\"{#SITENAME}\":\"$arg1\",\"{#PROXYIP}\":\"$arg2\"}]}\n"
+
+            printf "\t\t{\"{#SITENAME}\":\""${url}"\",\"{#PROXYIP}\":\""${ip}"\"}\n"
+            printf '\t]\n'
+            printf '}\n'
         fi
-}
+    done
 }
 
 web_site_code () {
-if [ "$2" == "" ]
-then
-    /usr/bin/curl --connect-timeout 5 -m 10 -o /dev/null -s -w %{http_code} http://$1
-else
-    /usr/bin/curl --connect-timeout 5 -m 10 -o /dev/null -s -w %{http_code} http://$1 -x $2:80
-fi
+    if [ "$2" == "" ]; then
+        curl -s --connect-timeout 2 -m 4 -o /dev/null -w %{http_code} $1
+    elif echo $2 |grep ':' &>/dev/null ; then
+        curl -s --connect-timeout 2 -m 4 -o /dev/null -w %{http_code} $1 -x $2
+    else
+        curl -s --connect-timeout 2 -m 4 -o /dev/null -w %{http_code} $1 -x $2:80
+    fi
 }
 
 case "$1" in
-web_site_discovery)
-web_site_discovery
-;;
-web_site_code)
-web_site_code $2 $3
-;;
-*)
-
-echo "Usage:$0 {web_site_discovery|web_site_code [URL]}"
-;;
+    web_site_discovery)
+        web_site_discovery
+        ;;
+    web_site_code)
+        web_site_code $2 $3
+        ;;
+    *)
+        echo "Usage:$0 {web_site_discovery|web_site_code [URL]}"
+        ;;
 esac

@@ -8,6 +8,8 @@
 
 5.重启zabbix agent
 
+
+
 注意：
 1.Keep lost resources period (in days) 设定当监控url更新后，多长时间更新，模板已经默认设置为0 days
 若出现not supported：Timeout while executing a shell script 将zabbix agent的timeout时间加大
